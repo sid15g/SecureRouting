@@ -58,6 +58,16 @@ public class CipherChain implements Serializable, Cloneable, Iterator<String> {
 	}//end of method
 	
 	
+	public String getCurrentChain()	{
+		StringBuilder buffer = new StringBuilder();
+		
+		for( int i=0; i<this.current; i++ )
+			buffer.append(this.ciphers.get(i));
+			
+		return buffer.toString();
+	}//end of method
+	
+	
 	@Override
 	public Object clone() throws CloneNotSupportedException {
 		List<String> list = new ArrayList<String>();

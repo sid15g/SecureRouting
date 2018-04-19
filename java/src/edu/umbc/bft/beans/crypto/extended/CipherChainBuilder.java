@@ -32,6 +32,7 @@ public class CipherChainBuilder		{
 		try {
 		
 			Route r = (Route)p.getHeader().getRoute().clone();
+			StringBuilder buffer = new StringBuilder(packet);
 			
 			while( r.hasNext() )	{
 				
@@ -39,7 +40,10 @@ public class CipherChainBuilder		{
 				String skey = Router.getSymmetricKeyFor(ip);
 				Logger.debug(CipherChainBuilder.class, " Encrypting using key "+ skey +" for Node: "+ ip);
 				Cipher c = new HMacNonNeighbors(skey.trim());
-				cipherTexts.add(c.encryprt(packet));
+//				cipherTexts.add(c.encryprt(packet));
+				String cipher = c.encryprt(buffer.toString());
+				cipherTexts.add(cipher);
+				buffer.append(cipher);
 				
 			}//end of loop
 			
@@ -55,14 +59,7 @@ public class CipherChainBuilder		{
 	public static CipherChain buildSignatureChain(Packet p)	{
 		
 		List<String> cipherTexts = new ArrayList<String>();
-//		String packet = DatagramFactory.hexString(p);
-//		Logger.debug(CipherChainBuilder.class, DatagramFactory.serialize(p) );
-		
-/*		Cipher c = Router.getMyAsymmetricKey();
-		String cipherText = c.encryprt(packet);
-		cipherTexts.add(cipherText);
-		Logger.info(CipherChainBuilder.class, " Digital signature chain created ");*/
-		
+		/** Signature added during updateDatagram() */
 		return new SignatureChain(cipherTexts);
 		
 	}//end of method

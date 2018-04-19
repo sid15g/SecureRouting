@@ -15,7 +15,18 @@ import edu.umbc.bft.util.Logger;
  * and marks all the links connecting p2 as faulty.
 **/
 public class FaultHandler implements MessageHandler {
-
+	
+	private static MessageHandler instance = null;
+	
+	public static synchronized MessageHandler getInstance()	{
+		if( instance == null )
+			instance = new FaultHandler();
+		return instance;
+	}//end of method
+	
+	private FaultHandler() {}
+	
+	
 	@Override
 	public void handle(NetworkInterface inf, Datagram dg) {
 

@@ -42,7 +42,7 @@ public class FaultPayload implements Payload {
 
 	@Override
 	public MessageHandler getHandler() {
-		return new FaultHandler();
+		return FaultHandler.getInstance();
 	}
 
 }

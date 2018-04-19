@@ -44,7 +44,7 @@ public class DataPayload implements Payload {
 
 	@Override
 	public MessageHandler getHandler() {
-		return new DataHandler();
+		return DataHandler.getInstance();
 	}
 
 }

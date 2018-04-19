@@ -31,7 +31,7 @@ public class AckPayload implements Payload {
 
 	@Override
 	public MessageHandler getHandler() {
-		return new AckHandler();
+		return AckHandler.getInstance();
 	}
 
 }

@@ -10,6 +10,17 @@ import edu.umbc.bft.util.Logger;
 
 public class AckHandler implements MessageHandler {
 
+	private static MessageHandler instance = null;
+	
+	public static synchronized MessageHandler getInstance()	{
+		if( instance == null )
+			instance = new AckHandler();
+		return instance;
+	}//end of method
+	
+	private AckHandler() {}
+	
+	
 	@Override
 	public void handle(NetworkInterface inf, Datagram dg) {
 

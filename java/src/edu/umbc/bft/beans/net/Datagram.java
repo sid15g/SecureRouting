@@ -18,9 +18,8 @@ public class Datagram	{
 	
 	private Header header;
 	private Payload payload;
+	private String signature;
 	private CipherChain cchain;
-	private String digitalSignature;
-	private String cipherTextForNeighbor;
 	
 	public Datagram(Header header, Payload payload) {
 		
@@ -32,19 +31,20 @@ public class Datagram	{
 		
 		if( payload.isCreateOnlySignature() )	{
 			String hex = DatagramFactory.hexString(new Packet(header, payload));
-			this.digitalSignature = Router.getMyAsymmetricKey().encryprt(hex);
-			this.cipherTextForNeighbor = null;
+			this.signature = Router.getMyAsymmetricKey().encryprt(hex);
+			//Not changed in updateDatagram()
 		}else	{
-			this.digitalSignature = null;
+			//Initialized every time on updateDatagram()
+			this.signature = null;
 		}
 		
 	}//end of constructor
 	
 	public Datagram(Datagram d) throws CloneNotSupportedException	{
+		this.signature = null;
 		this.header = d.header;
 		this.payload = d.payload;
 		this.cchain = (CipherChain)d.cchain.clone();
-		this.digitalSignature = this.cipherTextForNeighbor = null;
 	}//end of constructor
 	
 	public Header getHeader() {
@@ -62,11 +62,7 @@ public class Datagram	{
 	}
 	public int timeToLive() {
 		return this.getRoute().ttl();
-	}
-	
-	public void setCipherTextForNeighbor(String cipherTextForNeighbor) {
-		this.cipherTextForNeighbor = cipherTextForNeighbor;
-	}
+	}	
 	
 	public boolean validateSender() {
 		
@@ -85,7 +81,7 @@ public class Datagram	{
 				return false;
 			}else if( key!=null && key.length()>0 )	{
 				Cipher c = new HMacForNeighbor(key);
-				return c.verify(hex, this.cipherTextForNeighbor);
+				return c.verify(hex, this.signature);
 			}else	{
 				Logger.error(this.getClass(), " Unable to validate sender "+ p.getSource() +" | Key not found ");
 				return false;
@@ -144,7 +140,7 @@ public class Datagram	{
 				
 				if( key!=null && key.length()>0 )	{
 					try {
-						return ECDSA.verify(key, hex, this.digitalSignature);
+						return ECDSA.verify(key, hex, this.signature);						
 					}catch(Exception e) {
 						Logger.info(this.getClass(), " Signature verification failed ");
 						Logger.error(this.getClass(), e);
@@ -154,12 +150,14 @@ public class Datagram	{
 				}
 				
 			}else	{
-				/** Check Signature - valid for Fault announcements */
+				/** Check HMAC chain */
 				String key = Router.getSymmetricKeyFor(sourceip);
 				
 				if( key!=null && key.length()>0 )	{
 					Cipher c = new HMacNonNeighbors(key);
-					return c!=null?c.verify(hex, cchain.next()):false;
+					String plainText = hex + cchain.getCurrentChain();
+//					return c!=null?c.verify(hex, cchain.next()):false;
+					return c!=null?c.verify(plainText, cchain.next()):false;
 				}else	{
 					Logger.error(this.getClass(), " Unable to validate datagram | Source Key not found -> "+ sourceip );
 				}
@@ -190,8 +188,12 @@ public class Datagram	{
 			}			
 			
 		}
-	
-		return this.setHashForNeighbor();
+		
+		if( this.payload.isCreateOnlySignature() )	{
+			//Nothing to do
+			return true;
+		}else
+			return this.setHashForNeighbor();
 		
 	}//end of method
 	
@@ -207,8 +209,7 @@ public class Datagram	{
 			Packet p = new Packet(this.header, this.payload);
 			String hex = DatagramFactory.hexString(p);
 			Cipher c = new HMacForNeighbor(npKey);
-			String cipherText = c.encryprt(hex);
-			this.cipherTextForNeighbor = cipherText;
+			this.signature = c.encryprt(hex);
 			return true;
 			
 		}else	{

@@ -13,6 +13,17 @@ import edu.umbc.bft.util.Logger;
 
 public class DataHandler implements MessageHandler {
 	
+	private static MessageHandler instance = null;
+	
+	public static synchronized MessageHandler getInstance()	{
+		if( instance == null )
+			instance = new DataHandler();
+		return instance;
+	}//end of method
+	
+	private DataHandler() {}
+
+	
 	@Override
 	public void handle(NetworkInterface inf, Datagram dg) {
 		

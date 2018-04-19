@@ -65,15 +65,12 @@ public class Router {
 		
 		int port = Router.getPropertyAsInteger("server.port");
 		
-		Router.topologyManager = new TopologyManager();
-		
 		try {
 			
 			PortListener l = new PortListener(port);
 			MessageEngine e = new MessageEngine();
 			
 			Router.initiator = new MessageInitiator(l);
-			Router.routeFinder = new RouteDiscovery(Router.topologyManager);
 			Router.initiator.setDicovery(Router.routeFinder);
 			Router.destroyer.setListener(l);
 			Router.destroyer.setEngine(e);
@@ -105,6 +102,8 @@ public class Router {
 		Router.maxHops = total>maxHops?total:maxHops;
 
 		Router.keyManager = new KeyManager();
+		Router.topologyManager = new TopologyManager();
+		Router.routeFinder = new RouteDiscovery(Router.topologyManager);
 	}//end of method
 	
 	
@@ -355,8 +354,8 @@ public class Router {
 				set.add(d);
 			}
 			return true;
-		}else	{
-			Logger.error(Router.class, " UnExpected Payload type to store F.A. ");
+		}else if( d!=null )	{
+			Logger.error(Router.class, " UnExpected payload type to store F.A. : "+ d.getPayload().getClass().getName() );
 		}
 		return false;
 	}//end of method
@@ -364,14 +363,13 @@ public class Router {
 	
 	public static Set<Datagram> getFaultAnnouncements(Datagram d) {
 		
-		if( d!=null && d.getPayload() instanceof FaultPayload )	{
+		if( d!=null )	{
 			
 			long seq = d.getHeader().getSequenceNumber();			
 			return Router.faultAnnouncements.get(seq);
 			
-		}else	{
-			Logger.error(Router.class, " UnExpected Payload type to store F.A. ");
 		}
+		
 		return null;
 	}//end of method
 	
