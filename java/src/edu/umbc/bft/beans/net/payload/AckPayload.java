@@ -5,27 +5,28 @@ import java.nio.ByteBuffer;
 import edu.umbc.bft.router.engine.AckHandler;
 import edu.umbc.bft.router.engine.Engine.MessageHandler;
 
-public class AckPayload implements Payload {
+public class AckPayload implements Response {
 	
 	/** sequence number of original packet */
-	private long sequenceNo;
+	private long sequenceNum;
 	
 	public AckPayload(long seqNo) {
-		this.sequenceNo = seqNo;
+		this.sequenceNum = seqNo;
 	}//end of method
 	
-	public long getSequenceNo() {
-		return this.sequenceNo;
-	}
-
+	
 	@Override
-	public boolean isCreateOnlySignature() {
+	public long getSequenceNum() {
+		return this.sequenceNum;
+	}
+	@Override
+	public boolean hasSignature() {
 		return false;
 	}
 	@Override
 	public byte[] toByteArray() {
 		ByteBuffer bf = ByteBuffer.allocate(Long.BYTES);
-		bf.putLong(this.sequenceNo);
+		bf.putLong(this.sequenceNum);
 		return bf.array();
 	}
 

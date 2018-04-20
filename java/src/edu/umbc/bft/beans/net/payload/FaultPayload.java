@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 import edu.umbc.bft.router.engine.Engine.MessageHandler;
 import edu.umbc.bft.router.engine.FaultHandler;
 
-public class FaultPayload implements Payload {
+public class FaultPayload implements Response {
 
 	private String accuserNodeIp, suspectNodeIp;
 	private long sequenceNum;
@@ -23,12 +23,13 @@ public class FaultPayload implements Payload {
 	public String getSuspectNodeIp() {
 		return this.suspectNodeIp;
 	}
+	
+	@Override
 	public long getSequenceNum() {
 		return this.sequenceNum;
 	}
-
 	@Override
-	public boolean isCreateOnlySignature() {
+	public boolean hasSignature() {
 		return true;
 	}
 	@Override

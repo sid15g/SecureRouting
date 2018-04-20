@@ -8,7 +8,6 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.SocketException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -21,8 +20,7 @@ import edu.umbc.bft.beans.net.Datagram;
 import edu.umbc.bft.beans.net.header.Header;
 import edu.umbc.bft.beans.net.payload.FaultPayload;
 import edu.umbc.bft.beans.net.route.Route;
-import edu.umbc.bft.beans.timer.FaultManager;
-import edu.umbc.bft.exceptions.InvalidClassInstanceException;
+import edu.umbc.bft.beans.timer.TimerManager;
 import edu.umbc.bft.exceptions.KeyNotFoundException;
 import edu.umbc.bft.router.engine.MessageEngine;
 import edu.umbc.bft.router.extras.KeyManager;
@@ -36,25 +34,23 @@ public class Router {
 	
 	public static String serverIP;
 	public static int nodeID, maxHops;
+	private static TimerManager timers;
 	private static Destructor destroyer;
 	private static Properties configMap;
 	private static KeyManager keyManager;
 	private static RouteDiscovery routeFinder;
 	private static MessageInitiator initiator;
 	private static TopologyManager topologyManager;
-	private static Map<String, FaultManager> timers;
 	
 	/** IP->Node & ID->Node */
 	private static Map<String, NodeDetail> nodes;
 	/** SequenceNumber -> Faults */
-	private static Map<Long, Set<Datagram>> faultAnnouncements;
-	
+	private static Map<String, Datagram> faultAnnouncements;
 	
 	static	{
 		Router.maxHops = 8;
 		Router.configMap = new Properties();
-		Router.timers = new ConcurrentHashMap<String, FaultManager>();
-		Router.faultAnnouncements = new ConcurrentHashMap<Long, Set<Datagram>>();
+		Router.faultAnnouncements = new ConcurrentHashMap<String, Datagram>();
 	}
 	
 	public static void main(String[] args) {
@@ -92,7 +88,7 @@ public class Router {
 	}//end of main
 	
 	
-	public static void load() {
+	public static void load() {		
 		Router.loadProperties();
 		Router.fetchNodes();
 		
@@ -101,6 +97,7 @@ public class Router {
 		int total = Router.getPropertyAsInteger("total.nodes") * 2;
 		Router.maxHops = total>maxHops?total:maxHops;
 
+		Router.timers = new TimerManager();
 		Router.keyManager = new KeyManager();
 		Router.topologyManager = new TopologyManager();
 		Router.routeFinder = new RouteDiscovery(Router.topologyManager);
@@ -303,38 +300,29 @@ public class Router {
 	
 	public static boolean startAckTimer(NetworkInterface inf, Datagram d) {
 		
-		String dest = d.getHeader().getDestination();
+		if( d!=null && timers.startAckTimer(inf, d) != null )
+			return true;
+		else
+			return false;
 		
-		if( dest!=null && Router.timers.containsKey(dest)==false )	{
-			FaultManager manager = new FaultManager();
-			Router.timers.put(dest, manager);
-		}
-		
-		FaultManager manager = Router.timers.get(dest);
-		
-		try	{
-			if( manager.startAckTimer(inf, d) != null )
-				return true;
-		}catch(InvalidClassInstanceException e) {
-			Logger.error(Router.class, " Unable to start timer : \n"+ Logger.getStack(e) );
-		}
-		return false;
 	}//end of method
 	
 	public static boolean cancelAckTimer(Datagram d) {
-		
-		String dest = d.getHeader().getSource();
-		
-		if( dest!=null && Router.timers.containsKey(dest) )	{
 
-			FaultManager manager = Router.timers.get(dest);
-			return manager.cancelAckTimer(d);
-			
-		}else	{
-			Logger.error(Router.class, " No Timer Manager found for the ACK ");
-		}
+		if( d!=null )
+			return timers.cancelAckTimer(d);
+		else
+			return false;
 		
-		return false;
+	}//end of method
+	
+	
+	public static boolean hasAckTimer(Datagram d) {
+		
+		if( d!=null )
+			return timers.hasAckTimer(d);
+		else
+			return false;
 		
 	}//end of method
 	
@@ -343,29 +331,35 @@ public class Router {
 		
 		if( d!=null && d.getPayload() instanceof FaultPayload )	{
 			
-			long seq = d.getHeader().getSequenceNumber();
+			String seq = d.getSequenceKey();
 			
 			if( Router.faultAnnouncements.containsKey(seq) )	{
-				Set<Datagram> set = Router.faultAnnouncements.get(seq);
-				set.add(d);
+				
+				Datagram fa = Router.faultAnnouncements.get(seq);
+				
+				if( fa.getRoute().getHopsFromSource() > d.getRoute().getHopsFromSource() )	{
+					Router.faultAnnouncements.put(seq, d);
+				}
+
 			}else	{
-				Set<Datagram> set = new HashSet<Datagram>();
-				Router.faultAnnouncements.put(seq, set);
-				set.add(d);
+				Router.faultAnnouncements.put(seq, d);
 			}
+			
+			Logger.imp(Router.class, " FA saved with SeqNo: "+ seq );
 			return true;
+			
 		}else if( d!=null )	{
-			Logger.error(Router.class, " UnExpected payload type to store F.A. : "+ d.getPayload().getClass().getName() );
+			Logger.error(Router.class, " UnExpected payload type to store F.A. : "+ d.print() );
 		}
 		return false;
 	}//end of method
 	
 	
-	public static Set<Datagram> getFaultAnnouncements(Datagram d) {
+	public static Datagram getFaultAnnouncement(Datagram d) {
 		
 		if( d!=null )	{
 			
-			long seq = d.getHeader().getSequenceNumber();			
+			String seq = d.getSequenceKey();			
 			return Router.faultAnnouncements.get(seq);
 			
 		}
@@ -374,13 +368,8 @@ public class Router {
 	}//end of method
 	
 
-	public static void clearFaultAnnouncements(long key) 	{
-		
-		Set<Datagram> set = Router.faultAnnouncements.get(key);
-		
-		if( set!=null && set.size()>0 )
-			set.clear();
-		
+	public static void removeFaultAnnouncement(String key) 	{
+		Router.faultAnnouncements.remove(key);
 	}//end of method
 	
 

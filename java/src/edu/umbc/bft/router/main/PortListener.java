@@ -94,7 +94,7 @@ public class PortListener implements Runnable, NetworkInterface	{
 		int port = Router.getNodePort(serverIP);
 		if( port!=-1 && port>0 )	{
 			DatagramPacket pkt = DatagramFactory.createDatagramToSend(serverIP, port, message);
-			Logger.info(this.getClass(), " Sending to "+ serverIP +" @ "+ port );
+			Logger.info(this.getClass(), " Sending "+ message.print() +" to "+ serverIP +":"+ port );
 			synchronized (this.lock) {
 				this.send(pkt);
 			}

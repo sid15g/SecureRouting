@@ -9,6 +9,8 @@ import edu.umbc.bft.beans.crypto.extended.HMacNonNeighbors;
 import edu.umbc.bft.beans.crypto.extended.SignatureChain;
 import edu.umbc.bft.beans.net.header.Header;
 import edu.umbc.bft.beans.net.payload.Payload;
+import edu.umbc.bft.beans.net.payload.Request;
+import edu.umbc.bft.beans.net.payload.Response;
 import edu.umbc.bft.beans.net.route.Route;
 import edu.umbc.bft.router.main.DatagramFactory;
 import edu.umbc.bft.router.main.Router;
@@ -23,19 +25,18 @@ public class Datagram	{
 	
 	public Datagram(Header header, Payload payload) {
 		
+		this.cchain = null;
 		this.header = header;
 		this.payload = payload;
-		this.cchain = CipherChainBuilder.build(new Packet(this.header, this.payload));
 		
-		/** DSig validates sender, cipher chain validates the notes in the route */
-		
-		if( payload.isCreateOnlySignature() )	{
+		if( payload.hasSignature() )	{
 			String hex = DatagramFactory.hexString(new Packet(header, payload));
 			this.signature = Router.getMyAsymmetricKey().encryprt(hex);
 			//Not changed in updateDatagram()
 		}else	{
 			//Initialized every time on updateDatagram()
 			this.signature = null;
+			this.cchain = CipherChainBuilder.build(new Packet(this.header, this.payload));
 		}
 		
 	}//end of constructor
@@ -54,6 +55,22 @@ public class Datagram	{
 		return this.payload;
 	}
 	
+	public String getSequenceKey()	{
+		if( this.payload instanceof Request )	{
+			long seqNo = this.header.getSequenceNumber();
+			long resNo = ((Request)this.payload).getAckSequenceNo();
+			return seqNo +"_"+ resNo;
+		}else if( this.payload instanceof Response )	{
+			long resNo = this.header.getSequenceNumber();
+			long seqNo = ((Response)this.payload).getSequenceNum();
+			return seqNo +"_"+ resNo;			
+		}else	{
+			Logger.warn(this.getClass(), "No sequence key defined");
+			return String.valueOf(this.header.getSequenceNumber());
+		}
+	}//end of method
+	
+	
 	public final String getSource()	{
 		return this.getHeader().getSource();
 	}
@@ -68,24 +85,30 @@ public class Datagram	{
 		
 		if( this.header!=null && this.payload!=null )	{
 
-			Packet p = new Packet(this.header, this.payload);
-			String hex = DatagramFactory.hexString(p);
-			String source = this.getRoute().prev();
-			Logger.info(this.getClass(), " Sender IP: "+ source );
-			
-			String nodeIp = this.header.getRoute().current();
-			String key = Router.getSymmetricKeyFor(source);
-			
-			if( nodeIp==null || nodeIp.trim().equals(Router.serverIP)==false )	{
-				Logger.error(this.getClass(), " Invalid route | Expected next node to be "+ nodeIp );
-				return false;
-			}else if( key!=null && key.length()>0 )	{
-				Cipher c = new HMacForNeighbor(key);
-				return c.verify(hex, this.signature);
+			if( this.payload.hasSignature() )	{
+				//No need to verify the sender (Only source needs to be verified)
+				return true;
 			}else	{
-				Logger.error(this.getClass(), " Unable to validate sender "+ p.getSource() +" | Key not found ");
-				return false;
-			}
+				Packet p = new Packet(this.header, this.payload);
+				String hex = DatagramFactory.hexString(p);
+				String source = this.getRoute().prev();
+				Logger.info(this.getClass(), " Sender IP: "+ source );
+				
+				String nodeIp = this.header.getRoute().current();
+				String key = Router.getSymmetricKeyFor(source);
+				
+				if( nodeIp==null || nodeIp.trim().equals(Router.serverIP)==false )	{
+					Logger.error(this.getClass(), " Invalid route | Expected next node to be "+ nodeIp );
+					return false;
+				}else if( key!=null && key.length()>0 )	{
+					Cipher c = new HMacForNeighbor(key);
+					return c.verify(hex, this.signature);
+				}else	{
+					Logger.error(this.getClass(), " Unable to validate sender "+ p.getSource() +" | Key not found ");
+					return false;
+				}				
+			}//end of signature check
+			
 		}else	{
 			Logger.error(this.getClass(), " Sender Validation Failed | Invalid Datagram  | Null Header/Payload ");
 			return false;
@@ -134,7 +157,7 @@ public class Datagram	{
 					return false;
 				}//end of try catch
 				
-			}else if( this.payload.isCreateOnlySignature() ) {
+			}else if( this.payload.hasSignature() ) {
 				/** Check Signature - valid for Fault announcements */
 				String key = Router.getPublicKeyOf(sourceip);
 				
@@ -189,8 +212,9 @@ public class Datagram	{
 			
 		}
 		
-		if( this.payload.isCreateOnlySignature() )	{
-			//Nothing to do
+		if( this.payload.hasSignature() )	{
+			//Nothing to do, just increase the route count
+			this.getRoute().next();
 			return true;
 		}else
 			return this.setHashForNeighbor();
@@ -219,6 +243,10 @@ public class Datagram	{
 		
 	}//end of method
 	
+	
+	public String print() {
+		return "["+ this.payload.getClass().getSimpleName() +" | "+ this.getSource() +" | "+ this.header.getSequenceNumber() +"] ";
+	}//end of method
 	
 	@Override
 	public boolean equals(Object obj) 		{

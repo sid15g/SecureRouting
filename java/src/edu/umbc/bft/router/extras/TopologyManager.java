@@ -86,7 +86,8 @@ public class TopologyManager {
 		int sid = Router.getNodeID(srcIP);
 		int did = Router.getNodeID(destIP);
 		if( this.graph.containsKey(sid) && this.graph.containsKey(did) )	{
-			return this.graph.get(sid).get(did);
+			Float f = this.graph.get(sid).get(did);
+			return f!=null?f.floatValue():0.0F;
 		}else
 			return 0.0F;
 	}//end of method

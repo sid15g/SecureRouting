@@ -1,8 +1,5 @@
 package edu.umbc.bft.beans.timer;
 
-import java.util.Iterator;
-import java.util.Set;
-
 import edu.umbc.bft.beans.net.Datagram;
 import edu.umbc.bft.beans.net.header.DefaultHeader;
 import edu.umbc.bft.beans.net.header.Header;
@@ -46,7 +43,7 @@ public class AckTimeout extends Timeout {
 			Header h = new DefaultHeader(Router.serverIP, this.packet.getSource(), dp.getAckSequenceNo());
 			Router.findRoute(h);
 			
-			Logger.info(this.getClass(), " Sending fault announcement | Accused Node: "+ r.current() +" | Seq No. "+ originalSeqNum );
+			Logger.info(this.getClass(), " Generating fault announcement | Accused Node: "+ r.current() +" | Original Seq No. "+ originalSeqNum );
 			
 			Datagram d = new Datagram(h, p);
 			
@@ -100,32 +97,17 @@ public class AckTimeout extends Timeout {
 			
 			if( testingBR3==false || secureMode )	{
 				
-				Set<Datagram> fas = Router.getFaultAnnouncements(this.packet);
+				Datagram fa = Router.getFaultAnnouncement(this.packet);
 				
-				if( fas!=null && fas.size()>0 )		{
+				if( fa != null ) {
 					
-					Iterator<Datagram> iter = fas.iterator();
-							
-					Datagram bnode = iter.next();
-					int hops = bnode.getRoute().getHopsFromSource();
-					
-					while( iter.hasNext() )		{
-						
-						Datagram d = iter.next();
-						int temp = d.getRoute().getHopsFromSource();
-						
-						if( hops > temp  )	{
-							bnode = d;
-							hops = temp;
-						}
-						
-					}//end of loop
-					
-					String source = bnode.getSource();
-					String accused = bnode.getRoute().current();
+					FaultPayload p = (FaultPayload)fa.getPayload();
+					String accused = p.getSuspectNodeIp();
+					String source = p.getAccuserNodeIp();
 					
 					Logger.info(this.getClass(), " Marking the link FAULTY | Accuser: "+ source +" | Accused Node: "+ accused +" | Seq No. "+ originalSeqNum );
 					Router.getTopologyManager().markLinkFaulty(source, accused);
+					Router.removeFaultAnnouncement(fa.getSequenceKey());
 					
 				}else	{
 					String source = this.packet.getSource();

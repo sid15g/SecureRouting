@@ -97,18 +97,16 @@ public class Route implements Serializable, Cloneable, Iterator<String> {
 		
 	}//end of method
 	
-	public byte[] toByteArray() {	
-		ByteBuffer bf = ByteBuffer.allocate(4*Router.maxHops);			//128; Per IPAddress = 4 bytes
-		/** 
-		 * since source will create hash with current=0/1, other nodes cannot match the hash with other values 
-		 * therefore better not to serialize
-		 **/
-//		bf.putInt(this.current);		
-		bf.put(this.source.getBytes());
+	public byte[] toByteArray()		{
+		
+		final int size = 4 *(Router.maxHops+1);			//128; Per IPAddress = 4 bytes
+		ByteBuffer bf = ByteBuffer.allocate(size);
 		
 		for(int i=0; i<this.list.size(); i++)	{
 			bf.put(this.list.get(i).getBytes());
 		}
+		
+		bf.put(this.source.getBytes());
 		return bf.array();
 		
 	}//end of method

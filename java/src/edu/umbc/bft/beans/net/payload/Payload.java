@@ -5,7 +5,7 @@ import edu.umbc.bft.router.engine.Engine.MessageAdapter;
 
 public interface Payload extends MessageAdapter, Convertable	{
 	
-	public boolean isCreateOnlySignature();
+	public boolean hasSignature();
 	public byte[] toByteArray();
 	
 	@Override

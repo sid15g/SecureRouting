@@ -75,8 +75,8 @@ public class MultiKeygenerator {
 		try(
 				FileWriter writer = new FileWriter(f);
 				BufferedWriter buff = new BufferedWriter(writer);
-		) {
-
+		) {			
+			
 			for(int i=0; i<list.size(); i++ )		{
 				
 				try {
@@ -130,6 +130,12 @@ public class MultiKeygenerator {
 	public void configure(Set<String> ips, String path) throws Exception {
 		
 		List<String> list = new ArrayList<String>(ips);
+		
+		for(int i=0; i<list.size(); i++ )		{
+			int x = list.indexOf(String.valueOf(i+1));
+			list.remove(x);
+		}
+		
 		MultiKeygenerator mkg = new MultiKeygenerator();
 		mkg.generateAndSave(cipher.BOTH, path.trim(), list);
 		
@@ -146,11 +152,11 @@ public class MultiKeygenerator {
 		 **/
 		File keyMap = new File("resource", "key.map");
 		
-		if( keyMap.exists() == false )	{
+		if( keyMap.exists() )	{
 			try {
 				MultiKeygenerator mkg = new MultiKeygenerator();
 				mkg.configure(Router.getNodes(), keyMap.getPath());
-			} catch (Exception e1) {}			
+			} catch (Exception e1) {}
 		}//end of key generation
 		
 		System.out.println("Done");

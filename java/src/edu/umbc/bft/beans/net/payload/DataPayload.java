@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 import edu.umbc.bft.router.engine.DataHandler;
 import edu.umbc.bft.router.engine.Engine.MessageHandler;
 
-public class DataPayload implements Payload {
+public class DataPayload implements Request {
 
 	private String data;
 	private long ackSeqNo;
@@ -20,18 +20,19 @@ public class DataPayload implements Payload {
 	public String getData() {
 		return this.data;
 	}
-	public long getAckSequenceNo() {
-		return this.ackSeqNo;
-	}
 	public boolean isSecureReply() {
 		return this.secureReply;
 	}
 	public void setSecureReply(boolean secureReply) {
 		this.secureReply = secureReply;
 	}
-	
+
 	@Override
-	public boolean isCreateOnlySignature() {
+	public long getAckSequenceNo() {
+		return this.ackSeqNo;
+	}
+	@Override
+	public boolean hasSignature() {
 		return false;
 	}
 	@Override

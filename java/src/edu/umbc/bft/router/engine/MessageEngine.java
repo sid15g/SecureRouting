@@ -75,7 +75,7 @@ public class MessageEngine implements Runnable, Engine	{
 			
 			if(dg!=null && this.isRecent(dg) )	{
 				
-				Logger.info(this.getClass(), dg.getPayload().getClass().getSimpleName() +" received from "+ dg.getSource() );
+				Logger.info(this.getClass(), " Received: "+ dg.print() );
 				Logger.debug(this.getClass(), " Datagram: "+ DatagramFactory.serialize(dg) );
 				MessageHandler handler = dg.getPayload().getHandler();
 				handler.handle(this.listener, dg);

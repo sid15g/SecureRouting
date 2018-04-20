@@ -11,6 +11,8 @@ import edu.umbc.bft.util.Logger;
 public class AckHandler implements MessageHandler {
 
 	private static MessageHandler instance = null;
+
+	private float dropProbability;
 	
 	public static synchronized MessageHandler getInstance()	{
 		if( instance == null )
@@ -18,7 +20,11 @@ public class AckHandler implements MessageHandler {
 		return instance;
 	}//end of method
 	
-	private AckHandler() {}
+	
+	private AckHandler() {
+		String prob = Router.getProperty("ack.drop.prob");
+		this.dropProbability = Float.parseFloat(prob);
+	}//end of constructor
 	
 	
 	@Override
@@ -29,28 +35,31 @@ public class AckHandler implements MessageHandler {
 		
 		if( senderValidation && packetValidation )	{
 			
-			Router.cancelAckTimer(dg);
-			//TODO take action of cancellation fails
-			
-			if( dg.timeToLive() > 0 )	{
+			if( Router.cancelAckTimer(dg) )			{
 				
-				if( dg.updateDatagram() )	{
-					Random r = new Random();
-					if( r.nextFloat() > 0.50 )
-						inf.send(dg);
-					else	{
-						Logger.imp(this.getClass(), "Assume ACK was not delivered");
+				if( dg.timeToLive() > 0 )	{
+					
+					if( dg.updateDatagram() )	{
+						Random r = new Random();
+						if( r.nextFloat() <= this.dropProbability )
+							inf.send(dg);
+						else	{
+							Logger.imp(this.getClass(), "Assume ACK was not delivered");
+						}
+					}else	{
+						Logger.info(this.getClass(), "ACK not forwarded");
 					}
+					
+				}else if( dg.getRoute().current().equals(Router.serverIP) )	{
+					
+					Logger.info(this.getClass(), "Yeahhhh ACK found....");
+					
 				}else	{
-					Logger.info(this.getClass(), "ACK not forwarded");
+					Logger.imp(this.getClass(), " Destination IP mismatch | ACK dropped ");
 				}
 				
-			}else if( dg.getRoute().current().equals(Router.serverIP) )	{
-				
-				Logger.info(this.getClass(), "Yeahhhh ACK found....");
-				
 			}else	{
-				Logger.imp(this.getClass(), " Destination IP mismatch | ACK dropped ");
+				Logger.info(this.getClass(), " Delayed ACK | Timer not found | SeqNum: "+ dg.getHeader().getSequenceNumber() +" | Dropped... " );
 			}
 			
 		}else	{

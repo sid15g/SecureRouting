@@ -11,28 +11,28 @@ import edu.umbc.bft.router.main.NetworkInterface;
 import edu.umbc.bft.router.main.Router;
 import edu.umbc.bft.util.Logger;
 
-public class FaultManager {
+public class TimerManager {
 	
 	/** IP -> timer manager */
-	private Map<Long, Timeout> map;
+	private Map<String, Timeout> map;
 	private int networkTimeout;	
 	private Timer timerManager;
 	
 	
-	public FaultManager()	{
+	public TimerManager()	{
 		this( Router.getPropertyAsInteger("network.timeout.millis") );
 	}//end of constructor
 	
-	public FaultManager(int timeoutInMillis)	{
+	public TimerManager(int timeoutInMillis)	{
 		this.timerManager = new Timer();
 		this.networkTimeout = timeoutInMillis;
-		this.map = new ConcurrentHashMap<Long, Timeout>();		
+		this.map = new ConcurrentHashMap<String, Timeout>();		
 	}//end of constructor
 	
 	
 	public Timeout startAckTimer(NetworkInterface inf, Datagram d)	throws InvalidClassInstanceException	{
 		
-		if( d!=null && d.getPayload() instanceof DataPayload )		{  
+		if( d!=null && d.getPayload() instanceof DataPayload )		{
 			
 			final int hops = (int)(d.getHeader().getRoute().ttl() + 1.5);
 			AckTimeout t = new AckTimeout(this.networkTimeout*hops);
@@ -41,10 +41,9 @@ public class FaultManager {
 			
 			try	{
 				
-				Logger.info(this.getClass(), " Starting ACK timer for "+ t.getTimeoutInMillis() +" milli seconds. " );
+				Logger.info(this.getClass(), " Starting ACK timer of "+ t.getTimeoutInMillis() +" milli seconds for "+ d.print() );
 				this.timerManager.schedule(t, t.getTimeoutInMillis());
-				DataPayload dp = (DataPayload)d.getPayload();	
-				this.map.put(dp.getAckSequenceNo(), t);
+				this.map.put(d.getSequenceKey(), t);
 				
 			}catch(IllegalArgumentException iae)	{
 				Logger.error(this.getClass(), iae);
@@ -63,8 +62,7 @@ public class FaultManager {
 	
 	public boolean cancelAckTimer(Datagram d)	{
 		
-		long seqNum = d.getHeader().getSequenceNumber();
-		Timeout t = this.map.get(seqNum);
+		Timeout t = this.map.get(d.getSequenceKey());
 
 		if( t!=null && t instanceof AckTimeout )	{
 			if( t.isDone()==false )
@@ -75,6 +73,19 @@ public class FaultManager {
 		
 		return false;
 		
+	}//end of method
+	
+	
+	public boolean hasAckTimer(Datagram d) 	{
+
+		Timeout t = this.map.get(d.getSequenceKey());
+
+		if( t!=null && t instanceof AckTimeout )	{
+			if( t.isDone()==false )
+				return true;
+		}
+		return false;
+
 	}//end of method
 	
 }

@@ -34,23 +34,31 @@ public class FaultHandler implements MessageHandler {
 		boolean packetValidation = dg.validate();
 		
 		if( senderValidation && packetValidation )	{
-
-			Router.cancelAckTimer(dg);
-			//TODO take action of cancellation fails
 			
-			if( dg.timeToLive() > 0 )	{
+			if( dg.getHeader().getDestination().equals(Router.serverIP) )	{
+				//Wait until ACK timeout, and then process all the FAs. 
 				
-				if( dg.updateDatagram() )	{
-					Router.cancelAckTimer(dg);
-					inf.send(dg);
-				}else	{
-					Logger.info(this.getClass(), "F.A. not forwarded");
+				if( Router.hasAckTimer(dg) )	{
+					Logger.info(this.getClass(), " Waiting for all F.A.");
+					Router.addFaultAnnouncement(dg);
+				}else {
+					Logger.info(this.getClass(), " Delayed FA | Timer not found | SeqNum: "+ dg.getHeader().getSequenceNumber() +" | Dropped... " );
 				}
 				
-			}else if( dg.getRoute().current().equals(Router.serverIP) )	{
-				Logger.info(this.getClass(), " Waiting for all F.A.");
-				Router.addFaultAnnouncement(dg);
-				//TODO Wait until ACK timeout, and then process all the FAs. 
+			}else if( dg.timeToLive() > 0 )	{
+				
+				if( Router.cancelAckTimer(dg) )		{
+					if( dg.updateDatagram() )	{
+						inf.send(dg);
+					}else	{
+						Logger.info(this.getClass(), "F.A. not forwarded");
+					}
+				}else	{
+					Logger.info(this.getClass(), " Delayed FA | Timer not found | SeqNum: "+ dg.getHeader().getSequenceNumber() +" | Dropped... " );
+				}
+				
+			}else	{
+				Logger.imp(this.getClass(), " Destination IP mismatch | FA dropped ");
 			}
 			
 		}else	{
