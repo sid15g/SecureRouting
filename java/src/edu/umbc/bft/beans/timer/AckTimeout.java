@@ -7,6 +7,7 @@ import edu.umbc.bft.beans.net.payload.DataPayload;
 import edu.umbc.bft.beans.net.payload.FaultPayload;
 import edu.umbc.bft.beans.net.payload.Payload;
 import edu.umbc.bft.beans.net.route.Route;
+import edu.umbc.bft.router.main.NetworkInterface;
 import edu.umbc.bft.router.main.Router;
 import edu.umbc.bft.util.Logger;
 
@@ -14,20 +15,26 @@ public class AckTimeout extends Timeout {
 
 	private Datagram packet;
 	
-	public AckTimeout(long timeoutInMillis) {
-		super(timeoutInMillis);
-	}//end of constructor
-
-	public void setPacket(Datagram packet) {
-		try {
-			this.packet = new Datagram(packet);
-		}catch(CloneNotSupportedException e) {
-			Logger.error(this.getClass(), "Unable to store datagram object : "+ e.getMessage() );
-		}//end of try catch
-	}//end of method
-	
-
+	public AckTimeout(long timeoutInMillis, NetworkInterface inf, Datagram packet)		{
 		
+		super(timeoutInMillis);
+		super.setNetworkInf(inf);
+		
+		try {
+			if( packet!=null && packet.getRoute().length() > 0 )	{
+				this.packet = new Datagram(packet);
+			}else	{
+				throw new InstantiationException("No Datagram/Route to start timeout");
+			}
+		}catch(CloneNotSupportedException e) {
+			Logger.error(this.getClass(), " Unable to store datagram object : "+ e.getMessage() );
+		}catch(InstantiationException e)	{
+			Logger.error(this.getClass(), e.getMessage() );
+		}//end of try catch
+		
+	}//end of constructor	
+
+
 	@Override
 	public void onTimeout() {
 		
@@ -39,18 +46,22 @@ public class AckTimeout extends Timeout {
 		if( this.packet.getSource().equals(Router.serverIP) == false )			{
 			
 			DataPayload dp = (DataPayload)this.packet.getPayload();
-			Payload p = new FaultPayload(Router.serverIP, r.current(), originalSeqNum);
 			Header h = new DefaultHeader(Router.serverIP, this.packet.getSource(), dp.getAckSequenceNo());
-			Router.findRoute(h);
+			Route newRoute = Router.findRoute(h);
 			
-			Logger.info(this.getClass(), " Generating fault announcement | Accused Node: "+ r.current() +" | Original Seq No. "+ originalSeqNum );
-			
-			Datagram d = new Datagram(h, p);
-			
-			if( d.updateDatagram() )
-				super.getNetworkInf().send(d);
-			else {
-				Logger.info(this.getClass(), "F.A. not sent");
+			if( newRoute!=null && newRoute.length()>0 )			{
+				
+				Logger.info(this.getClass(), " Generating fault announcement | Accused Node: "+ r.current() +" | Original Seq No. "+ originalSeqNum );
+				Payload p = new FaultPayload(Router.serverIP, r.current(), originalSeqNum);
+				Datagram d = new Datagram(h, p);
+				
+				if( d.updateDatagram() )
+					super.getNetworkInf().send(d);
+				else {
+					Logger.info(this.getClass(), "F.A. not sent");
+				}
+			}else	{
+				Logger.warn(this.getClass(), "No Route found... Unable to send FA ");
 			}
 			
 		}else	{

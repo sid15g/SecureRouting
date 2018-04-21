@@ -6,6 +6,7 @@ import edu.umbc.bft.beans.net.header.Header;
 import edu.umbc.bft.beans.net.payload.AckPayload;
 import edu.umbc.bft.beans.net.payload.DataPayload;
 import edu.umbc.bft.beans.net.payload.Payload;
+import edu.umbc.bft.beans.net.route.Route;
 import edu.umbc.bft.router.engine.Engine.MessageHandler;
 import edu.umbc.bft.router.main.NetworkInterface;
 import edu.umbc.bft.router.main.Router;
@@ -46,21 +47,24 @@ public class DataHandler implements MessageHandler {
 				DataPayload payload = (DataPayload)dg.getPayload();
 				long resAck = payload.getAckSequenceNo();
 				
-				Logger.info(this.getClass(), " Replying by ACK with secure mode "+ payload.isSecureReply());
-				
 				Header h = new DefaultHeader(Router.serverIP, dg.getSource(), resAck);
 				h.setSecureMode(payload.isSecureReply());
-				Router.findRoute(h);
+				Route newRoute = Router.findRoute(h);
 				
-				Payload ack = new AckPayload(dg.getHeader().getSequenceNumber());
-				Datagram replyAck = new Datagram(h,ack); 
-				
-				if( replyAck.updateDatagram() )	{
-					inf.send(replyAck);
+				if( newRoute!=null && newRoute.length()>0 )			{
+					Logger.info(this.getClass(), " Replying by ACK with secure mode "+ payload.isSecureReply());
+					
+					Payload ack = new AckPayload(dg.getHeader().getSequenceNumber());
+					Datagram replyAck = new Datagram(h,ack); 
+					
+					if( replyAck.updateDatagram() )	{
+						inf.send(replyAck);
+					}else	{
+						Logger.info(this.getClass(), "ACK not sent");	
+					}
 				}else	{
-					Logger.info(this.getClass(), "ACK not sent");	
+					Logger.warn(this.getClass(), "No Route found... Unable to send ACK ");
 				}
-				
 				
 			}else	{
 				Logger.imp(this.getClass(), " Destination IP mismatch | Datagram dropped ");

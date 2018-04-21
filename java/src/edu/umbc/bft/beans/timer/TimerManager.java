@@ -34,10 +34,8 @@ public class TimerManager {
 		
 		if( d!=null && d.getPayload() instanceof DataPayload )		{
 			
-			final int hops = (int)(d.getHeader().getRoute().ttl() + 1.5);
-			AckTimeout t = new AckTimeout(this.networkTimeout*hops);
-			t.setNetworkInf(inf);
-			t.setPacket(d);
+			final int hops = (int)((d.getHeader().getRoute().ttl()+1) * 1.5F);
+			AckTimeout t = new AckTimeout(this.networkTimeout*hops, inf, d);
 			
 			try	{
 				

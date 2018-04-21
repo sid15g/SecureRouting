@@ -69,20 +69,27 @@ public class MessageInitiator implements Runnable {
 			
 			MessageToSend m = this.messages.get(i);
 			Datagram d = this.toDatagram(m);
-			long diff = m.getTimeline() - lastMessageTime;
-			lastMessageTime = m.getTimeline();
 			
-			try {
-				Logger.debug(this.getClass(), "Waiting for "+ diff +" millis to send ");
-				Thread.sleep(diff);
-			}catch(InterruptedException e) {
-				Logger.warn(this.getClass(), " Sleep interrupted; sending message before scheduled time..");
+			if( d != null )			{
+				
+				long diff = m.getTimeline() - lastMessageTime;
+				lastMessageTime = m.getTimeline();
+				
+				try {
+					Logger.debug(this.getClass(), "Waiting for "+ diff +" millis to send ");
+					Thread.sleep(diff);
+				}catch(InterruptedException e) {
+					Logger.warn(this.getClass(), " Sleep interrupted; sending message before scheduled time..");
+				}
+				
+//				NodeDetail nd = Router.getNodeDetails(m.getNodeId());
+//				this.ninterface.sendTo(nd.getIp(), nd.getPort(), m.getData());
+				Router.startAckTimer(this.ninterface, d);
+				this.ninterface.send(d);
+				
+			}else	{
+				Logger.info(this.getClass(), " Unable to send datagram... ");
 			}
-			
-			Router.startAckTimer(this.ninterface, d);
-//			NodeDetail nd = Router.getNodeDetails(m.getNodeId());
-//			this.ninterface.sendTo(nd.getIp(), nd.getPort(), m.getData());
-			this.ninterface.send(d);
 			
 		}//end of loop
 		
@@ -93,18 +100,26 @@ public class MessageInitiator implements Runnable {
 		
 		DefaultHeader h = new DefaultHeader(Router.serverIP, Router.getNodeIP(m.getNodeId()));
 		Route r = this.dicovery.find(Router.nodeID, m.getNodeId());
-		int seqNo = this.getNextSequenceNumber();
-		h.setSequenceNo(seqNo);
-		h.setRoute(r);
-
-		final int ackOffset = m.getNodeId() * Router.maxHops;
-		Payload p = new DataPayload(m.getData(), seqNo+ackOffset);
-		Datagram d = new Datagram(h, p);
 		
-		if( d.updateDatagram() == false )
-			Logger.error(this.getClass(), "Datagram creation failed");
-		
-		return d;
+		if( r.length() > 0 )		{
+			int seqNo = this.getNextSequenceNumber();
+			h.setSequenceNo(seqNo);
+			h.setRoute(r);
+			
+			final int ackOffset = m.getNodeId() * Router.maxHops;
+			Payload p = new DataPayload(m.getData(), seqNo+ackOffset);
+			Datagram d = new Datagram(h, p);
+			
+			if( d.updateDatagram() ) {
+				return d;
+			}else	{
+				Logger.error(this.getClass(), "Datagram creation failed");
+				return null;
+			}
+		}else	{
+			Logger.warn(this.getClass(), "No Route found... ");
+			return null;
+		}
 		
 	}//end of method
 	
