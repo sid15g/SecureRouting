@@ -28,7 +28,7 @@ public class DataHandler implements MessageHandler {
 	@Override
 	public void handle(NetworkInterface inf, Datagram dg) {
 		
-		boolean senderValidation = dg.validateSender();
+		boolean senderValidation = true; //dg.validateSender();
 		boolean packetValidation = dg.validate();
 		
 		if( senderValidation && packetValidation )	{
@@ -49,7 +49,14 @@ public class DataHandler implements MessageHandler {
 				
 				Header h = new DefaultHeader(Router.serverIP, dg.getSource(), resAck);
 				h.setSecureMode(payload.isSecureReply());
-				Route newRoute = Router.findRoute(h);
+				
+				Route newRoute = null;
+				newRoute = dg.getRoute().reverseRoute();
+				h.setRoute(newRoute);
+				
+				if( newRoute == null )
+					newRoute = Router.findRoute(h);
+				
 				
 				if( newRoute!=null && newRoute.length()>0 )			{
 					Logger.info(this.getClass(), " Replying by ACK with secure mode "+ payload.isSecureReply());

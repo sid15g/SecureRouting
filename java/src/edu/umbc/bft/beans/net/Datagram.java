@@ -216,9 +216,11 @@ public class Datagram	{
 			//Nothing to do, just increase the route count
 			this.getRoute().next();
 			return true;
-		}else
-			return this.setHashForNeighbor();
-		
+		}else		{
+			this.getRoute().next();
+			return true;
+//			return this.setHashForNeighbor();
+		}
 	}//end of method
 	
 	

@@ -30,7 +30,7 @@ public class FaultHandler implements MessageHandler {
 	@Override
 	public void handle(NetworkInterface inf, Datagram dg) {
 
-		boolean senderValidation = dg.validateSender();
+		boolean senderValidation = true; //dg.validateSender();
 		boolean packetValidation = dg.validate();
 		
 		if( senderValidation && packetValidation )	{

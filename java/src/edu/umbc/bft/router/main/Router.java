@@ -32,6 +32,7 @@ import edu.umbc.bft.util.Logger;
 
 public class Router {
 	
+	public static Object lock;
 	public static String serverIP;
 	public static int nodeID, maxHops;
 	private static TimerManager timers;
@@ -49,6 +50,7 @@ public class Router {
 	
 	static	{
 		Router.maxHops = 8;
+		Router.lock = new Object();
 		Router.configMap = new Properties();
 		Router.faultAnnouncements = new ConcurrentHashMap<String, Datagram>();
 	}
@@ -59,7 +61,7 @@ public class Router {
 		Router.addDestructor();
 		Router.load();
 		
-		int port = Router.getPropertyAsInteger("server.port");
+		int port = Router.getPropertyAsInteger("node."+ nodeID +".port");
 		
 		try {
 			
@@ -67,7 +69,6 @@ public class Router {
 			MessageEngine e = new MessageEngine();
 			
 			Router.initiator = new MessageInitiator(l);
-			Router.initiator.setDicovery(Router.routeFinder);
 			Router.destroyer.setListener(l);
 			Router.destroyer.setEngine(e);
 			
@@ -92,8 +93,8 @@ public class Router {
 		Router.loadProperties();
 		Router.fetchNodes();
 		
-		Router.serverIP = Router.getProperty("server.ip").trim();
 		Router.nodeID = Router.getPropertyAsInteger("server.id");
+		Router.serverIP = Router.getProperty("node."+ nodeID +".ip").trim();
 		int total = Router.getPropertyAsInteger("total.nodes") * 2;
 		Router.maxHops = total>maxHops?total:maxHops;
 
@@ -296,7 +297,7 @@ public class Router {
 		h.setRoute(r);
 		return r;
 	}//end of method
-	
+
 	
 	public static boolean startAckTimer(NetworkInterface inf, Datagram d) {
 		

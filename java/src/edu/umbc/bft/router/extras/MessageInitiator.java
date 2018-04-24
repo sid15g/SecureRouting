@@ -1,10 +1,9 @@
 package edu.umbc.bft.router.extras;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 
 import edu.umbc.bft.beans.MessageToSend;
 import edu.umbc.bft.beans.net.Datagram;
@@ -19,92 +18,95 @@ import edu.umbc.bft.util.Logger;
 public class MessageInitiator implements Runnable {
 
 	private Thread thread;
-	private RouteDiscovery dicovery;
-	private NetworkInterface ninterface;
-	private List<MessageToSend> messages;
+	private final int totalMessages;
 	private int lastSN, secondLastSN;
+	private NetworkInterface ninterface;
 		
 	public MessageInitiator(NetworkInterface ninterface)	{
 		
-		final int total = Router.getPropertyAsInteger("send.total");
-		this.messages = new ArrayList<MessageToSend>(total);
+		this.totalMessages = Router.getPropertyAsInteger("send.total");
 		this.thread = new Thread(this);
 		this.ninterface = ninterface;
-		Gson gson = new Gson();
 		
 		Random r = new Random();
 		final int offset = 2 * Router.maxHops;
 		this.secondLastSN = r.nextInt(offset);
 		this.lastSN = this.secondLastSN + r.nextInt(offset);
 		
-		for( int i=1; i<=total; i++ )	{
-			
-			String json = Router.getProperty("send.p"+ i);
-			MessageToSend m = gson.fromJson(json.trim(), MessageToSend.class);
-			m.setId(i);
-			Logger.debug(this.getClass(), " MessageToSend parsed: "+ gson.toJson(m));
-			this.messages.add(m);
-			
-		}//end of loop
-		
 	}//end of constructor
-	
 	
 	public final void start()	{
 		this.thread.start();
-	}
-	public int getTotalMessages() {
-		return this.messages.size();
-	}
-	public void setDicovery(RouteDiscovery dicovery) {
-		this.dicovery = dicovery;
-	}
+	}	
 	
 	@Override
-	public void run() {
+	public void run()		{
 		
-		long lastMessageTime = 0L; 
+		Gson gson = new Gson();
 		
-		for( int i=0; i<this.messages.size(); i++ )	{
+		for( int i=1; i<=this.totalMessages; i++ )		{
 			
-			MessageToSend m = this.messages.get(i);
-			Datagram d = this.toDatagram(m);
+			String json = Router.getProperty("send.p"+ i);
+			json = json!=null?json.trim():null;
 			
-			if( d != null )			{
-				
-				long diff = m.getTimeline() - lastMessageTime;
-				lastMessageTime = m.getTimeline();
+			try {
+			
+				MessageToSend m = gson.fromJson(json, MessageToSend.class);
+				m.setId(i);
+				Logger.debug(this.getClass(), " MessageToSend parsed: "+ gson.toJson(m));				
 				
 				try {
-					Logger.debug(this.getClass(), "Waiting for "+ diff +" millis to send ");
-					Thread.sleep(diff);
+					Logger.debug(this.getClass(), " Waiting for "+ m.getTimeline() +" millis to send ");
+					Thread.sleep(m.getTimeline());
 				}catch(InterruptedException e) {
 					Logger.warn(this.getClass(), " Sleep interrupted; sending message before scheduled time..");
 				}
 				
-//				NodeDetail nd = Router.getNodeDetails(m.getNodeId());
-//				this.ninterface.sendTo(nd.getIp(), nd.getPort(), m.getData());
-				Router.startAckTimer(this.ninterface, d);
-				this.ninterface.send(d);
+				for( int j=0; j<m.getCopies(); j++ )	{
+										
+					Logger.info(this.getClass(), " Creating "+ (j+1) +" copy of the message "+ i );
+					Datagram d = this.toDatagram(m);
+					
+					if( d != null )			{
+						
+						Router.startAckTimer(this.ninterface, d);
+						this.ninterface.send(d);
+						
+						try {
+							synchronized (Router.lock) {
+								Logger.info(this.getClass(), " Waiting for the response... ");
+								Router.lock.wait();
+							}
+						}catch(InterruptedException e) {
+							Logger.warn(this.getClass(), e.getMessage() );
+						}
+						
+					}else	{
+						Logger.info(this.getClass(), " Unable to send datagram... ");
+					}
+					
+					
+				}//end of copy loop
 				
-			}else	{
-				Logger.info(this.getClass(), " Unable to send datagram... ");
-			}
+			}catch(JsonSyntaxException e) {
+				Logger.warn(this.getClass(), " Unable to parse MessageToSend : "+ json );
+				Logger.info(this.getClass(), " Message "+ i +"not sent. ");
+			}//end of try catch
 			
 		}//end of loop
 		
 	}//end of thread
 
 	
-	private Datagram toDatagram(MessageToSend m) {
+	private Datagram toDatagram(MessageToSend m)		{
 		
 		DefaultHeader h = new DefaultHeader(Router.serverIP, Router.getNodeIP(m.getNodeId()));
-		Route r = this.dicovery.find(Router.nodeID, m.getNodeId());
+		Route r = Router.findRoute(h);
 		
-		if( r.length() > 0 )		{
+		if( r!=null && r.length() > 0 )		{
+			
 			int seqNo = this.getNextSequenceNumber();
 			h.setSequenceNo(seqNo);
-			h.setRoute(r);
 			
 			final int ackOffset = m.getNodeId() * Router.maxHops;
 			Payload p = new DataPayload(m.getData(), seqNo+ackOffset);
@@ -113,17 +115,19 @@ public class MessageInitiator implements Runnable {
 			if( d.updateDatagram() ) {
 				return d;
 			}else	{
-				Logger.error(this.getClass(), "Datagram creation failed");
+				Logger.error(this.getClass(), " Datagram creation failed");
 				return null;
 			}
+			
 		}else	{
-			Logger.warn(this.getClass(), "No Route found... ");
+			Logger.warn(this.getClass(), " No Route found... ");
 			return null;
 		}
 		
 	}//end of method
 	
 	
+	/** Fibonacci Pattern to determine next sequence number */
 	public int getNextSequenceNumber()		{
 		int seqNo = this.secondLastSN + this.lastSN - 1;
 		this.secondLastSN = this.lastSN;

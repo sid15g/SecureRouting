@@ -72,15 +72,14 @@ public class CipherTests {
 	}
 	
 	@Test
-	public void testDigSig() throws Exception {
+	public void testKeyParsing() throws Exception {
 		
 		String plain = "3132372e302e302e323132372e302e302e31000000000000002e013132372e302e302e323132372e302e302e333132372e302e302e3100000000000000000000000000000000001e00"; 
 		String cipher = "3046022100e789d8564e2b24bf601cb473afc5637a91d62ef7ad914ecdb518b04506611935022100f381e033afca00cd786ab2434cc1b02cf5d8f844e41f3b64453ebf29813f18c1";
-		
 		String key = "3059301306072a8648ce3d020106082a8648ce3d030107034200041e248abec305f0b1126a151b833f9d9ae95423525c832d9888d41748be7bcc74d6b37d0b44ef627644bf1c11022cd5973f127c1e56f2ed8ac3e814c2bc920ca6";
 		
-		System.out.println(ECDSA.verify(key, plain, cipher));
-		
+		Assert.assertEquals(true, ECDSA.verify(key, plain, cipher));
+	
 	}
 	
 }

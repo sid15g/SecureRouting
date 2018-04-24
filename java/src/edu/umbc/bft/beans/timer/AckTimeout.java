@@ -47,7 +47,14 @@ public class AckTimeout extends Timeout {
 			
 			DataPayload dp = (DataPayload)this.packet.getPayload();
 			Header h = new DefaultHeader(Router.serverIP, this.packet.getSource(), dp.getAckSequenceNo());
-			Route newRoute = Router.findRoute(h);
+
+			Route newRoute = null;
+			newRoute = r.reverseRoute();
+			h.setRoute(newRoute);
+			
+			if( newRoute == null )
+				newRoute = Router.findRoute(h);
+
 			
 			if( newRoute!=null && newRoute.length()>0 )			{
 				
@@ -129,6 +136,10 @@ public class AckTimeout extends Timeout {
 			}//end of marking link faulty
 			
 		}//end of source check
+		
+		synchronized(Router.lock)	{
+			Router.lock.notify();
+		}
 		
 	}//end of timer
 

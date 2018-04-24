@@ -3,10 +3,12 @@ package edu.umbc.bft.beans.net.route;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
 import edu.umbc.bft.router.main.Router;
+import edu.umbc.bft.util.Logger;
 
 public class Route implements Serializable, Cloneable, Iterator<String> {
 
@@ -110,6 +112,41 @@ public class Route implements Serializable, Cloneable, Iterator<String> {
 		return bf.array();
 		
 	}//end of method
+
+	
+	public Route reverseRoute() {
+		
+		if( this.list.contains(Router.serverIP) )			{
+			
+			List<String> list = new ArrayList<String>(this.list.size());
+			final int last = this.list.size() - 1;
+			Route r = new Route(list);
+			r.source = this.list.get(last);
+			
+			for( int i=0; i<last ; i++ )	{
+				
+				String nodeip = this.list.get(i);
+				
+				if( Router.serverIP.equals(nodeip) )	{				
+					r.source = nodeip;
+					break;
+				}else	{
+					list.add(nodeip);				
+				}
+				
+			}//end of loop
+			
+			Collections.reverse(list);
+			list.add(this.source);
+			
+			return r;
+			
+		}else	{
+			Logger.error(this.getClass(), " Cannot find reverse route... ");
+			return null;
+		}
+	}//end of method
+	
 	
 	@Override
 	public Object clone() throws CloneNotSupportedException {

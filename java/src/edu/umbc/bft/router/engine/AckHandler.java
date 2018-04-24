@@ -30,7 +30,7 @@ public class AckHandler implements MessageHandler {
 	@Override
 	public void handle(NetworkInterface inf, Datagram dg) {
 
-		boolean senderValidation = dg.validateSender();
+		boolean senderValidation = true; //dg.validateSender();
 		boolean packetValidation = dg.validate();
 		
 		if( senderValidation && packetValidation )	{
@@ -41,7 +41,7 @@ public class AckHandler implements MessageHandler {
 					
 					if( dg.updateDatagram() )	{
 						Random r = new Random();
-						if( r.nextFloat() <= this.dropProbability )
+						if( (int)this.dropProbability==0 || r.nextFloat() > this.dropProbability )
 							inf.send(dg);
 						else	{
 							Logger.imp(this.getClass(), "Assume ACK was not delivered");
@@ -53,6 +53,10 @@ public class AckHandler implements MessageHandler {
 				}else if( dg.getRoute().current().equals(Router.serverIP) )	{
 					
 					Logger.info(this.getClass(), "Yeahhhh ACK found....");
+					
+					synchronized(Router.lock)	{
+						Router.lock.notify();
+					}
 					
 				}else	{
 					Logger.imp(this.getClass(), " Destination IP mismatch | ACK dropped ");

@@ -2,7 +2,7 @@ package edu.umbc.bft.beans;
 
 import java.io.Serializable;
 
-public class MessageToSend implements Serializable, Comparable<MessageToSend> {
+public class MessageToSend implements Serializable {
 
 	private static final long serialVersionUID = 2439435952375090989L;
 	
@@ -10,14 +10,11 @@ public class MessageToSend implements Serializable, Comparable<MessageToSend> {
 	private String data;
 	private int nodeId;
 	private long timeline;
-	private boolean faulty;
+	private int copies;
 
 
 	public void setId(int id) {
 		this.id = id;
-	}
-	public void setFaulty(boolean faulty) {
-		this.faulty = faulty;
 	}
 	public int getId() {
 		return this.id;
@@ -31,14 +28,8 @@ public class MessageToSend implements Serializable, Comparable<MessageToSend> {
 	public long getTimeline() {
 		return this.timeline;
 	}
-	public boolean isFaulty() {
-		return this.faulty;
-	}
-
-	@Override
-	public int compareTo(MessageToSend m) {
-		// TODO Auto-generated method stub
-		return 0;
+	public int getCopies() {
+		return copies;
 	}
 	
 	

@@ -83,11 +83,5 @@ public class SerializationTests {
 		p2 = DatagramFactory.hexString(p);
 		Assert.assertNotEquals(p1, p2);
 	}//end of method
-
-	
-	@Test
-	public void testDatagramDeSerialization()	{
-		//TODO
-	}//end of method
 	
 }

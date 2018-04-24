@@ -70,7 +70,7 @@ public class RouteDiscovery		{
 		
 		List<Pair> links = this.getSortedLinksOf(sid);
 		Stack<Integer> route = new Stack<Integer>();
-		Gson gson = new Gson(); 
+		Gson gson = new Gson();
 		boolean res = false;
 		
 		if( links.contains(new Pair(did)) )	{
