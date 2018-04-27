@@ -159,6 +159,7 @@ public class Router {
 	public static void loadProperties()		{
 		try			{
 
+//			File config = new File("./resource/general.properties");
 			File config = new File("./resource/config.properties");
 			BufferedInputStream bis = null;
 

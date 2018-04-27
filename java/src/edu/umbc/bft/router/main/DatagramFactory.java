@@ -73,7 +73,7 @@ public class DatagramFactory {
 	public static String hexString(Packet p)	{
 		byte[] a = p.getHeader().toByteArray();
 		byte[] b = p.getPayload().toByteArray();
-		ByteBuffer bf = ByteBuffer.allocate(a.length + b.length + 1);
+		ByteBuffer bf = ByteBuffer.allocate(a.length + b.length + 3);
 		bf.put(a);
 		bf.put(b);
 		byte[] arr = hexcoder.encode(bf.array());

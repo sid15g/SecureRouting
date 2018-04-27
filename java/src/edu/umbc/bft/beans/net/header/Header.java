@@ -16,7 +16,7 @@ public interface Header extends Convertable	{
 	
 	public default byte[] toByteArray()	{
 		byte[] r = getRoute().toByteArray();
-		ByteBuffer bf = ByteBuffer.allocate(32 + r.length);
+		ByteBuffer bf = ByteBuffer.allocate(32 + r.length + Long.BYTES + 3);
 		bf.put(getSource().getBytes());
 		bf.put(getDestination().getBytes());
 		bf.putLong(getSequenceNumber());

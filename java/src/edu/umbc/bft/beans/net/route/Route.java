@@ -100,7 +100,6 @@ public class Route implements Serializable, Cloneable, Iterator<String> {
 	}//end of method
 	
 	public byte[] toByteArray()		{
-		
 		final int size = 4 *(Router.maxHops+1);			//128; Per IPAddress = 4 bytes
 		ByteBuffer bf = ByteBuffer.allocate(size);
 		

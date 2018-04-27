@@ -16,6 +16,10 @@ public class FaultPayload implements Response {
 		this.sequenceNum = sequenceNum;
 	}//end of constructor
 	
+	public FaultPayload(AckPayload p)	{
+		
+	}//end of constructor
+	
 	
 	public String getAccuserNodeIp() {
 		return this.accuserNodeIp;

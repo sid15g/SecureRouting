@@ -3,6 +3,12 @@ package edu.umbc.bft.router.engine;
 import java.util.Random;
 
 import edu.umbc.bft.beans.net.Datagram;
+import edu.umbc.bft.beans.net.header.DefaultHeader;
+import edu.umbc.bft.beans.net.header.Header;
+import edu.umbc.bft.beans.net.payload.AckPayload;
+import edu.umbc.bft.beans.net.payload.FaultPayload;
+import edu.umbc.bft.beans.net.payload.Payload;
+import edu.umbc.bft.beans.net.route.Route;
 import edu.umbc.bft.router.engine.Engine.MessageHandler;
 import edu.umbc.bft.router.main.NetworkInterface;
 import edu.umbc.bft.router.main.Router;
@@ -12,7 +18,7 @@ public class AckHandler implements MessageHandler {
 
 	private static MessageHandler instance = null;
 
-	private float dropProbability;
+	private float dropProbability, framingProbability;
 	
 	public static synchronized MessageHandler getInstance()	{
 		if( instance == null )
@@ -22,8 +28,10 @@ public class AckHandler implements MessageHandler {
 	
 	
 	private AckHandler() {
-		String prob = Router.getProperty("ack.drop.prob");
-		this.dropProbability = Float.parseFloat(prob);
+		String dprob = Router.getProperty("ack.drop.prob");
+		String fprob = Router.getProperty("frame.packet.prob");
+		this.dropProbability = Float.parseFloat(dprob);
+		this.framingProbability = Float.parseFloat(fprob);
 	}//end of constructor
 	
 	
@@ -39,14 +47,50 @@ public class AckHandler implements MessageHandler {
 				
 				if( dg.timeToLive() > 0 )	{
 					
-					if( dg.updateDatagram() )	{
-						Random r = new Random();
-						if( (int)this.dropProbability==0 || r.nextFloat() > this.dropProbability )
-							inf.send(dg);
-						else	{
-							Logger.imp(this.getClass(), "Assume ACK was not delivered");
+					boolean faulty = false;
+					Random r = new Random();
+					final String prevNode = dg.getRoute().prev();
+					
+//					final float succProb = 100 - this.dropProbability - this.framingProbability;
+					final float faultProb = this.dropProbability + this.framingProbability;
+					
+					if( (int)this.dropProbability!=0 && r.nextFloat() < this.dropProbability )	{
+						
+						Logger.imp(this.getClass(), "Assume ACK was not delivered");			
+						faulty = true;
+								
+					}else if( (int)this.framingProbability!=0 && r.nextFloat()<faultProb )	{
+						
+						Route newRoute = dg.getRoute();
+//						Route newRoute = rt.reverseRoute();	// wrong
+						AckPayload ack = (AckPayload)dg.getPayload();
+													
+						if( newRoute!=null && newRoute.length() > 0 )		{
+							
+							Logger.imp(this.getClass(), " Generating fake FA | Accused Node: "+ prevNode );
+							Header h = new DefaultHeader( Router.serverIP, dg.getHeader().getDestination(), dg.getHeader().getSequenceNumber() );
+							h.setRoute(newRoute);
+							Payload p = new FaultPayload(Router.serverIP, prevNode, ack.getSequenceNum());
+							Datagram d = new Datagram(h, p);
+							
+							if( d.updateDatagram() )	{
+								Logger.info(this.getClass(), " ACK dropped deliberately ");
+								faulty = true;
+								inf.send(d);
+							}else {
+								Logger.info(this.getClass(), "Fake F.A. not sent | ACK dropped ");
+							}
+							
+						}else	{
+							Logger.debug(this.getClass(), "Unable to generate fake FA... Following default protocol");
 						}
-					}else	{
+						
+					}//end of faulty check
+					
+					if( faulty==false && dg.updateDatagram() )	{
+						// Forward the ACK; without any faulty behavior
+						inf.send(dg);
+					}else if( faulty == false )	{
 						Logger.info(this.getClass(), "ACK not forwarded");
 					}
 					

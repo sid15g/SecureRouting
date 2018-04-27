@@ -150,9 +150,9 @@ public class MultiKeygenerator {
 		 * Generate Keys for all nodes and save it in a file,
 		 * assuming this way to be secure and no node is accessing other nodes private key
 		 **/
-		File keyMap = new File("resource", "key.map");
+		File keyMap = new File("resource", "keys.map");
 		
-		if( keyMap.exists() )	{
+		if( keyMap.exists() == false )	{
 			try {
 				MultiKeygenerator mkg = new MultiKeygenerator();
 				mkg.configure(Router.getNodes(), keyMap.getPath());
