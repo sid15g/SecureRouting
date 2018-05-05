@@ -18,7 +18,7 @@ We implement and evaluate our protocols using DeterLab, demonstrating that our p
 * Copy the Java archive (jar) to the parent folder of 'secureRouter\_lib'
 * Deploy one instance of this application, in every server
 * Configure the IP addresses of the nodes/servers in the configuration
-* Use `MultiKeyGenerator` class to generate Symmetric and Assymetric keys for all the nodes
+* Use `edu.umbc.bft.beans.crypto.MultiKeygenerator` class to generate Symmetric and Asymmetric keys for all the nodes
 * Add it to the Java archive (Assuming that the key has been distributed securely to all the nodes)
 * Use the below command to run the application on every server
 ``` java -jar secureRouter.jar ```
