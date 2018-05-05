@@ -3,14 +3,12 @@
 Implemented as a research assistant, under [Prof. Haibin Zhang](https://www.csee.umbc.edu/~hbzhang/)
 
 ### About:
-We describe efficient path-based Byzantine routing protocols that are secure against _fully Byzantine adversary. Our work is in sharp contrast to prior works which handle a weaker subset of Byzantine attacks. 
-We provide a formal proof of correctness of our protocols which, to our knowledge, is the first of its kind. 
-We implement and evaluate our protocols using DeterLab, demonstrating that our protocols are as efficient as those secure against weaker adversaries and our protocols can efficiently and correctly detect routers that fail arbitrarily.
+To define an efficient path-based Byzantine routing protocols that are secure against _fully_ Byzantine adversary. Our work is in sharp contrast to prior works which handle a weaker subset of Byzantine attacks. We implement and evaluate our protocols using [DeterLab](https://www.isi.deterlab.net/index.php3), demonstrating that our protocols are as efficient as those secure against weaker adversaries and our protocols can efficiently and correctly detect routers that fail arbitrarily.
 
 ### Prerequisites:
 * Java 8
 * Maven
-* Distributed System
+* Distributed evironment
 
 ### How to execute: 
 * Compile the project using Maven and `pom.xml`
