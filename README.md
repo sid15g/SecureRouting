@@ -20,3 +20,6 @@ To define an efficient path-based Byzantine routing protocols that are secure ag
 * Add it to the Java archive (Assuming that the key has been distributed securely to all the nodes)
 * Use the below command to run the application on every server
 ``` java -jar secureRouter.jar ```
+
+### [Publication](https://ieeexplore.ieee.org/document/8548163)
+* Published in `2018 IEEE 17th International Symposium on Network Computing and Applications (NCA)`
